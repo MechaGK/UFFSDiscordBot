@@ -47,8 +47,8 @@ namespace DiscordBot.Modules
         private Vote _vote = new Vote(message: null, user: null, voteCount: 0, inProgress: false);
         private IEmote _pepega;
         private bool _reactionAddedAttached;
-        private int _votesNeeded = 5;
-        private int _pepegaTime = 30;
+        private const int VotesNeeded = 5;
+        private const int PepegaTime = 60 * 18;
 
         [Command("pepega")]
         public async Task PingAsync(IUser user = null)
@@ -64,6 +64,16 @@ namespace DiscordBot.Modules
             {
                 this._pepega = Emote.Parse("<:pepega:558348236730007592>");
             }
+            
+            user = user ?? Context.User;
+            
+            var role = Context.Guild.Roles.FirstOrDefault(x => x.Name == "Pepega");
+            if (((IGuildUser) user).RoleIds.Contains(role.Id))
+            {
+                await Context.Message.AddReactionAsync(_pepega);
+                await ReplyAsync($"{user.Mention} er allerede en {_pepega}");
+                return;
+            }
 
             bool voteInProgress;
             lock (_vote)
@@ -72,13 +82,13 @@ namespace DiscordBot.Modules
 
                 if (!voteInProgress)
                 {
-                    user = user ?? Context.User;
                     _vote = _vote.Copy(messageId: null, user: user, voteCount: 0, inProgress: true);
                 }
             }
 
             if (voteInProgress)
             {
+                await Context.Message.AddReactionAsync(_pepega);
                 await ReplyAsync($"{Context.User} der er en nominering i gang {_pepega}");
                 return;
             }
@@ -144,7 +154,7 @@ namespace DiscordBot.Modules
                     return;
                 }
 
-                if (_vote.VoteCount + 1 >= _votesNeeded)
+                if (_vote.VoteCount + 1 >= VotesNeeded)
                 {
                     succeededVote = _vote.Copy(voteCount: _vote.VoteCount + 1);
                     _vote = _vote.Copy(inProgress: false, voteCount: _vote.VoteCount + 1);
@@ -172,7 +182,7 @@ namespace DiscordBot.Modules
 
         private async Task DelayedRemovePepegaTitle(IUser user)
         {
-            await Task.Delay(TimeSpan.FromMinutes(_pepegaTime));
+            await Task.Delay(TimeSpan.FromMinutes(PepegaTime));
             
             var role = Context.Guild.Roles.FirstOrDefault(x => x.Name == "Pepega");
             await ((IGuildUser) user).RemoveRoleAsync(role);
